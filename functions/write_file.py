@@ -1,7 +1,7 @@
 import os
 
 def write_file(working_directory, file_path, content):
-    # try:
+    try:
         working_dir_abs = os.path.abspath(working_directory)
         target_dir = os.path.normpath(os.path.join(working_dir_abs, file_path))
 
@@ -21,5 +21,5 @@ def write_file(working_directory, file_path, content):
             f.write(content)
 
         return f'Successfully wrote to "{file_path}" ({len(content)} characters written)'
-    # except Exception as e:
-    #    return f"Error: {e}"
+    except Exception as e:
+        return f"Error: {e}"
