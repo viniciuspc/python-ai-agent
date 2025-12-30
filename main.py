@@ -19,45 +19,56 @@ args = parser.parse_args()
 messages = [types.Content(role="user", parts=[types.Part(text=args.user_prompt)])]
 
 def main():
-    generated_content = client.models.generate_content(
-        model="gemini-2.5-flash", 
-        contents=messages,
-        config=types.GenerateContentConfig(
-            tools=[available_functions], system_instruction=system_prompt
-            ),
-        )
-    usage_metadata = generated_content.usage_metadata
-    if usage_metadata:
-        if args.verbose:
-            print(f"User prompt: {args.user_prompt}")
-            print(f"Prompt tokens: {usage_metadata.prompt_token_count}")
-            print(f"Response tokens: {usage_metadata.candidates_token_count}")
+    for _ in range(20):
+        generated_content = client.models.generate_content(
+            model="gemini-2.5-flash", 
+            contents=messages,
+            config=types.GenerateContentConfig(
+                tools=[available_functions], system_instruction=system_prompt
+                ),
+            )
         
-        function_calls = generated_content.function_calls
+        candidates = generated_content.candidates
+        if candidates:
+            for candidate in candidates:
+                messages.append(candidate.content)
         
-        if function_calls:
-            function_results = []
-            for function_call in function_calls:
-                function_call_result = call_function(function_call, args.verbose)
-                
-                if not function_call_result.parts:
-                    raise Exception("function_call_result.parts does not exists ")
-                
-                function_call_result_part = function_call_result.parts[0]
-                
-                if not function_call_result_part.function_response or not function_call_result_part.function_response.response:
-                    raise Exception("function_call_result response is does not exists")
-                
-                function_results.append(function_call_result_part)
-                
-                if args.verbose:
-                    print(f"-> {function_call_result.parts[0].function_response.response}")
-                
-                
+        usage_metadata = generated_content.usage_metadata
+        if usage_metadata:
+            if args.verbose:
+                print(f"User prompt: {args.user_prompt}")
+                print(f"Prompt tokens: {usage_metadata.prompt_token_count}")
+                print(f"Response tokens: {usage_metadata.candidates_token_count}")
+            
+            function_calls = generated_content.function_calls
+            
+            if function_calls:
+                function_results = []
+                for function_call in function_calls:
+                    function_call_result = call_function(function_call, args.verbose)
+                    
+                    if not function_call_result.parts:
+                        raise Exception("function_call_result.parts does not exists ")
+                    
+                    function_call_result_part = function_call_result.parts[0]
+                    
+                    if not function_call_result_part.function_response or not function_call_result_part.function_response.response:
+                        raise Exception("function_call_result response is does not exists")
+                    
+                    function_results.append(function_call_result_part)
+                    
+                    if args.verbose:
+                        print(f"-> {function_call_result.parts[0].function_response.response}")
+                        
+                messages.append(types.Content(role="user", parts=function_results))
+            else:
+                print(generated_content.text)
+                return
         else:
-            print(generated_content.text)
-    else:
-        raise RuntimeError("Failed to connect to Gemini API")
+            raise RuntimeError("Failed to connect to Gemini API")
+        
+    print("Model could not produce a result with 20 interation. Exiting with code 1")
+    exit(1)
 
 
 if __name__ == "__main__":
